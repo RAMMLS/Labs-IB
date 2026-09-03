@@ -74,7 +74,7 @@ class Handler(BaseHTTPRequestHandler):
             }
             callback = routes.get(path)
             if not callback:
-                self.send_json({"error": "not found"}, 404)
+                self.send_json({"error": "не найдено"}, 404)
                 return
             self.send_json({"ok": True, "result": callback(payload)})
         except (ValueError, RuntimeError, TypeError, json.JSONDecodeError) as error:
@@ -90,7 +90,7 @@ class Handler(BaseHTTPRequestHandler):
             elif config_match:
                 result = engine.update_startup_config(config_match.group(1), self.read_json())
             else:
-                self.send_json({"error": "not found"}, 404)
+                self.send_json({"error": "не найдено"}, 404)
                 return
             self.send_json({"ok": True, "result": result})
         except (ValueError, RuntimeError, TypeError, json.JSONDecodeError) as error:
@@ -106,7 +106,7 @@ class Handler(BaseHTTPRequestHandler):
             elif link_match:
                 engine.delete_link(link_match.group(1))
             else:
-                self.send_json({"error": "not found"}, 404)
+                self.send_json({"error": "не найдено"}, 404)
                 return
             self.send_json({"ok": True})
         except (ValueError, RuntimeError) as error:

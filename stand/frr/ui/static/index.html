@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Labs-IB Network Lab</title>
+    <title>Сетевой стенд Labs-IB</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="app-header">
-      <div class="brand"><span class="brand-mark">N</span><b>Labs-IB</b><small>NETWORK LAB</small></div>
+      <div class="brand"><span class="brand-mark">N</span><b>Labs-IB</b><small>СЕТЕВОЙ СТЕНД</small></div>
       <div class="lab-title"><i></i><span id="lab-title">Новая лабораторная</span></div>
       <div class="engine"><span id="engine-dot"></span><b>Docker ARM64</b><small>локально на Mac</small></div>
     </header>
@@ -19,13 +19,13 @@
           <p class="section-label">Лаборатория</p>
           <button id="add-node" class="side-action primary"><span>＋</span>Добавить объект</button>
           <button id="add-link" class="side-action"><span>⌁</span>Соединить узлы</button>
-          <button id="startup-configs" class="side-action"><span>▤</span>Startup Configs</button>
+          <button id="startup-configs" class="side-action" title="Сохранённые конфигурации, которые можно применить после сброса узла"><span>▤</span>Стартовые конфигурации</button>
         </section>
         <section>
           <p class="section-label">Управление</p>
           <button id="start-all" class="side-action"><span>▶</span>Запустить все</button>
           <button id="stop-all" class="side-action"><span>■</span>Остановить все</button>
-          <button id="export-all" class="side-action"><span>⇩</span>Экспорт CFG всех</button>
+          <button id="export-all" class="side-action"><span>⇩</span>Экспорт конфигураций</button>
           <button id="refresh" class="side-action"><span>↻</span>Обновить поле</button>
         </section>
         <section class="system-status">
@@ -37,7 +37,7 @@
         </section>
         <div class="sidebar-help">
           <b>Рабочий цикл PNETLab</b>
-          <p>Добавь выключенные ноды → выбери порты → запусти → кликни по ноде и настрой её в консоли → сохрани CFG.</p>
+          <p>Добавь выключенные узлы → выбери порты → запусти → кликни по узлу и настрой его в консоли → сохрани конфигурацию.</p>
         </div>
       </aside>
 
@@ -53,14 +53,14 @@
             <div id="empty-state">
               <div class="empty-icon">＋</div>
               <h1>Пустая лабораторная</h1>
-              <p>Добавь vESR-совместимый FRR-маршрутизатор или VPC.<br>Топология, адреса и протоколы остаются твоей работой.</p>
+              <p>Добавь совместимый с vESR FRR-маршрутизатор или виртуальный ПК.<br>Топология, адреса и протоколы остаются твоей работой.</p>
               <button id="empty-add">Добавить первый узел</button>
             </div>
           </div>
         </div>
         <div class="workspace-footer">
-          <span>Клик — HTML-консоль</span>
-          <span>Правый клик — Start / Stop / Wipe / Export / Capture</span>
+          <span>Клик — веб-консоль</span>
+          <span>Правый клик — запуск / остановка / сброс / экспорт / захват</span>
           <span>Порты gi1/0/N показаны рядом с кабелем</span>
         </div>
       </main>
@@ -68,89 +68,89 @@
 
     <div id="add-modal" class="modal" aria-hidden="true">
       <div class="dialog node-dialog">
-        <div class="dialog-title"><b>ADD A NEW NODE</b><button data-close="add-modal">×</button></div>
+        <div class="dialog-title"><b>ДОБАВЛЕНИЕ НОВОГО УЗЛА</b><button data-close="add-modal" aria-label="Закрыть">×</button></div>
         <form id="add-form">
-          <label for="node-template">Template</label>
+          <label for="node-template">Шаблон</label>
           <select id="node-template" name="type">
-            <option value="router">Eltex vESR — FRR functional equivalent</option>
-            <option value="pc">Virtual PC (VPCS)</option>
+            <option value="router">Eltex vESR — функциональный эквивалент FRR</option>
+            <option value="pc">Виртуальный ПК (VPCS)</option>
           </select>
           <div class="form-grid two">
-            <label>Number of nodes to add<input name="count" type="number" min="1" max="10" value="1"></label>
-            <label>Image<input id="node-image" value="FRRouting 10.7.1 / ARM64" readonly></label>
+            <label>Количество узлов<input name="count" type="number" min="1" max="10" value="1"></label>
+            <label>Образ<input id="node-image" value="FRRouting 10.7.1 / ARM64" readonly></label>
           </div>
-          <label>Name<input id="node-name" name="name" maxlength="64" autocomplete="off" required></label>
-          <label>Description<input name="description" maxlength="256" autocomplete="off"></label>
+          <label>Имя<input id="node-name" name="name" maxlength="64" autocomplete="off" required></label>
+          <label>Описание<input name="description" maxlength="256" autocomplete="off"></label>
           <div class="form-grid three">
-            <label>CPU<input name="cpu" type="number" min="1" max="4" value="1"></label>
-            <label>RAM (MB)<input id="node-ram" name="ram" type="number" min="64" max="4096" value="512"></label>
-            <label>Ethernet<input id="node-ethernet" name="ethernet" type="number" min="1" max="16" value="4"></label>
+            <label>Процессорные ядра<input name="cpu" type="number" min="1" max="4" value="1"></label>
+            <label>ОЗУ (МБ)<input id="node-ram" name="ram" type="number" min="64" max="4096" value="512"></label>
+            <label>Сетевые порты<input id="node-ethernet" name="ethernet" type="number" min="1" max="16" value="4"></label>
           </div>
           <div class="form-grid two">
-            <label>Primary Console<select name="console"><option>HTML5</option></select></label>
-            <label>First NIC<input value="Auto" readonly></label>
+            <label>Основная консоль<select name="console"><option>Веб-консоль</option></select></label>
+            <label>Первый сетевой адаптер<input value="Автоматически" readonly></label>
           </div>
-          <p class="form-note">Нода создаётся выключенной, как в PNETLab. Vendor ISO не требуется: базовая ARM64-система уже собрана Compose.</p>
-          <div class="dialog-actions"><button type="button" data-close="add-modal">Cancel</button><button class="confirm" type="submit">Add</button></div>
+          <p class="form-note">Узел создаётся выключенным, как в PNETLab. Установочный образ производителя не требуется: базовая ARM64-система уже собрана Docker Compose.</p>
+          <div class="dialog-actions"><button type="button" data-close="add-modal">Отмена</button><button class="confirm" type="submit">Добавить</button></div>
         </form>
       </div>
     </div>
 
     <div id="link-modal" class="modal" aria-hidden="true">
       <div class="dialog link-dialog">
-        <div class="dialog-title"><b id="link-title">ADD CONNECTION</b><button data-close="link-modal">×</button></div>
+        <div class="dialog-title"><b id="link-title">ДОБАВЛЕНИЕ СОЕДИНЕНИЯ</b><button data-close="link-modal" aria-label="Закрыть">×</button></div>
         <form id="link-form">
           <div class="link-endpoints">
-            <div><span class="endpoint-icon">A</span><b id="link-a-name"></b><label>Choose Interface<select id="link-a-interface" required></select></label></div>
+            <div><span class="endpoint-icon">А</span><b id="link-a-name"></b><label>Выберите интерфейс<select id="link-a-interface" required></select></label></div>
             <div class="cable-preview">────────</div>
-            <div><span class="endpoint-icon">B</span><b id="link-b-name"></b><label>Choose Interface<select id="link-b-interface" required></select></label></div>
+            <div><span class="endpoint-icon">Б</span><b id="link-b-name"></b><label>Выберите интерфейс<select id="link-b-interface" required></select></label></div>
           </div>
-          <p class="form-note">Кабель занимает выбранные порты. Серый кабель — одна или обе ноды выключены; зелёный — обе запущены.</p>
-          <div class="dialog-actions"><button type="button" data-close="link-modal">Cancel</button><button class="confirm" type="submit">Save</button></div>
+          <p class="form-note">Кабель занимает выбранные порты. Серый кабель — один или оба узла выключены; зелёный — оба запущены.</p>
+          <div class="dialog-actions"><button type="button" data-close="link-modal">Отмена</button><button class="confirm" type="submit">Сохранить</button></div>
         </form>
       </div>
     </div>
 
     <div id="edit-modal" class="modal" aria-hidden="true">
       <div class="dialog small-dialog">
-        <div class="dialog-title"><b>EDIT NODE</b><button data-close="edit-modal">×</button></div>
+        <div class="dialog-title"><b>РЕДАКТИРОВАНИЕ УЗЛА</b><button data-close="edit-modal" aria-label="Закрыть">×</button></div>
         <form id="edit-form">
           <input id="edit-id" type="hidden">
-          <label>Name<input id="edit-name" maxlength="64" required></label>
-          <label>Description<input id="edit-description" maxlength="256"></label>
+          <label>Имя<input id="edit-name" maxlength="64" required></label>
+          <label>Описание<input id="edit-description" maxlength="256"></label>
           <div class="form-grid three">
-            <label>CPU<input id="edit-cpu" type="number" min="1" max="4"></label>
-            <label>RAM (MB)<input id="edit-ram" type="number" min="64" max="4096"></label>
-            <label>Ethernet<input id="edit-ethernet" type="number" min="1" max="16"></label>
+            <label>Процессорные ядра<input id="edit-cpu" type="number" min="1" max="4"></label>
+            <label>ОЗУ (МБ)<input id="edit-ram" type="number" min="64" max="4096"></label>
+            <label>Сетевые порты<input id="edit-ethernet" type="number" min="1" max="16"></label>
           </div>
-          <div class="dialog-actions"><button type="button" data-close="edit-modal">Cancel</button><button class="confirm" type="submit">Save</button></div>
+          <div class="dialog-actions"><button type="button" data-close="edit-modal">Отмена</button><button class="confirm" type="submit">Сохранить</button></div>
         </form>
       </div>
     </div>
 
     <div id="console-modal" class="modal" aria-hidden="true">
       <div class="dialog console-dialog">
-        <div class="dialog-title blue"><div><b id="console-title">HTML Console</b><small id="console-status">node</small></div><button data-close="console-modal">×</button></div>
+        <div class="dialog-title blue"><div><b id="console-title">Веб-консоль</b><small id="console-status">узел</small></div><button data-close="console-modal" aria-label="Закрыть">×</button></div>
         <div class="console-toolbar">
-          <label>Console <select id="console-mode"><option value="frr">Router CLI</option><option value="vpc">VPC CLI</option><option value="shell">Linux shell</option></select></label>
-          <span id="interface-list">Interfaces: none</span>
-          <button id="console-clear">Clear</button>
+          <label>Режим <select id="console-mode"><option value="frr">Консоль маршрутизатора</option><option value="vpc">Консоль виртуального ПК</option><option value="shell">Командная оболочка Linux</option></select></label>
+          <span id="interface-list">Интерфейсы: нет</span>
+          <button id="console-clear">Очистить</button>
         </div>
         <pre id="console-output"></pre>
-        <form id="console-form" class="console-line"><span id="console-prompt">node#</span><input id="console-input" autocomplete="off" spellcheck="false"><button>Enter</button></form>
-        <div class="console-help">Enter — выполнить · ↑/↓ — история · можно вставить несколько строк · commit сохраняет конфигурацию роутера</div>
+        <form id="console-form" class="console-line"><span id="console-prompt">узел#</span><input id="console-input" autocomplete="off" spellcheck="false"><button>Выполнить</button></form>
+        <div class="console-help">Enter — выполнить · ↑/↓ — история · можно вставить несколько строк · команда commit сохраняет конфигурацию маршрутизатора</div>
       </div>
     </div>
 
     <div id="startup-modal" class="modal" aria-hidden="true">
       <div class="dialog startup-dialog">
-        <div class="dialog-title"><b>STARTUP CONFIGURATIONS</b><button data-close="startup-modal">×</button></div>
+        <div class="dialog-title"><div><b>СТАРТОВЫЕ КОНФИГУРАЦИИ</b><small>сохранённые настройки для восстановления после сброса</small></div><button data-close="startup-modal" aria-label="Закрыть">×</button></div>
         <div class="startup-layout">
           <div id="startup-list"></div>
           <div class="startup-editor">
-            <div><b id="startup-name">Выберите ноду</b><label><input id="startup-enabled" type="checkbox"> применять после Wipe</label></div>
+            <div><b id="startup-name">Выберите узел</b><label><input id="startup-enabled" type="checkbox"> применять после сброса</label></div>
             <textarea id="startup-content" spellcheck="false" disabled></textarea>
-            <div class="dialog-actions"><a id="startup-download" class="button-link disabled">Download CFG</a><button id="startup-save" class="confirm" disabled>Save</button></div>
+            <div class="dialog-actions"><a id="startup-download" class="button-link disabled">Скачать конфигурацию</a><button id="startup-save" class="confirm" disabled>Сохранить</button></div>
           </div>
         </div>
       </div>
@@ -158,28 +158,28 @@
 
     <div id="capture-modal" class="modal" aria-hidden="true">
       <div class="dialog capture-dialog">
-        <div class="dialog-title"><b>PACKET CAPTURE</b><button data-close="capture-modal">×</button></div>
+        <div class="dialog-title"><b>ЗАХВАТ ПАКЕТОВ</b><button data-close="capture-modal" aria-label="Закрыть">×</button></div>
         <form id="capture-form">
-          <label>Interface<select id="capture-interface"></select></label>
-          <p class="form-note">Захват слушает до 20 пакетов или 8 секунд. Сначала запусти трафик, например ping.</p>
-          <pre id="capture-output">Выберите интерфейс и нажмите Start capture.</pre>
-          <div class="dialog-actions"><button type="button" data-close="capture-modal">Close</button><button class="confirm">Start capture</button></div>
+          <label>Интерфейс<select id="capture-interface"></select></label>
+          <p class="form-note">Захват слушает до 20 пакетов или 8 секунд. Сначала запусти трафик, например командой ping.</p>
+          <pre id="capture-output">Выберите интерфейс и нажмите «Начать захват».</pre>
+          <div class="dialog-actions"><button type="button" data-close="capture-modal">Закрыть</button><button class="confirm">Начать захват</button></div>
         </form>
       </div>
     </div>
 
     <div id="node-menu" class="context-menu">
-      <div id="node-menu-title">NODE</div>
-      <button data-node-action="console">HTML Console</button>
-      <button data-node-action="start">Start</button>
-      <button data-node-action="stop">Stop</button>
-      <button data-node-action="restart">Reload</button>
-      <button data-node-action="wipe">Wipe</button>
-      <button data-node-action="export">Export CFG</button>
-      <button data-node-action="capture">Capture</button>
+      <div id="node-menu-title">УЗЕЛ</div>
+      <button data-node-action="console">Веб-консоль</button>
+      <button data-node-action="start">Запустить</button>
+      <button data-node-action="stop">Остановить</button>
+      <button data-node-action="restart">Перезагрузить</button>
+      <button data-node-action="wipe">Сбросить</button>
+      <button data-node-action="export">Экспортировать конфигурацию</button>
+      <button data-node-action="capture">Захватить пакеты</button>
       <hr>
-      <button data-node-action="edit">Edit</button>
-      <button data-node-action="delete" class="danger">Delete</button>
+      <button data-node-action="edit">Редактировать</button>
+      <button data-node-action="delete" class="danger">Удалить</button>
     </div>
     <div id="toast"></div>
     <script src="app.js"></script>

@@ -211,18 +211,18 @@ def create_container(node):
 def create_nodes(payload):
     node_type = str(payload.get("type", "")).lower()
     if node_type not in ("router", "pc"):
-        raise ValueError("тип узла должен быть router или pc")
+        raise ValueError("неизвестный тип узла: выберите маршрутизатор или виртуальный ПК")
     base_name = str(payload.get("name", "")).strip()[:64]
     if not base_name:
         raise ValueError("задайте имя узла")
     count = bounded_int(payload.get("count", 1), 1, 10, "количество")
-    ethernet = bounded_int(payload.get("ethernet", 4 if node_type == "router" else 1), 1, 16, "Ethernet")
-    cpu = bounded_int(payload.get("cpu", 1), 1, 4, "CPU")
-    ram = bounded_int(payload.get("ram", 512 if node_type == "router" else 128), 64, 4096, "RAM")
+    ethernet = bounded_int(payload.get("ethernet", 4 if node_type == "router" else 1), 1, 16, "сетевые порты")
+    cpu = bounded_int(payload.get("cpu", 1), 1, 4, "процессорные ядра")
+    ram = bounded_int(payload.get("ram", 512 if node_type == "router" else 128), 64, 4096, "ОЗУ")
     x = max(80, min(1800, int(payload.get("x", 360))))
     y = max(80, min(1000, int(payload.get("y", 260))))
     description = str(payload.get("description", "")).strip()[:256]
-    image = "FRRouting 10.7.1 (vESR equivalent)" if node_type == "router" else "Alpine Linux 3.22 (VPC)"
+    image = "FRRouting 10.7.1 (эквивалент vESR)" if node_type == "router" else "Alpine Linux 3.22 (виртуальный ПК)"
     created = []
     try:
         for index in range(count):
@@ -270,7 +270,19 @@ def refresh_interfaces(node_id):
     resolved = {}
     for link in links:
         side = "a" if link["a"] == node_id else "b"
-        resolved[link["id"]] = interface_for(node["container"], link[f"{side}_ip"])
+        transport_ip = link[f"{side}_ip"]
+        actual = interface_for(node["container"], transport_ip)
+        if actual:
+            prefix = link["subnet"].split("/", 1)[1]
+            # Docker требует адрес при подключении контейнера к bridge-сети.
+            # Он нужен только для обнаружения имени интерфейса и затем удаляется,
+            # чтобы не создавать лишнее соседство в OSPF/RIP и не влиять на лабу.
+            run(["docker", "exec", node["container"], "ip", "addr", "del", f"{transport_ip}/{prefix}", "dev", actual])
+        else:
+            previous = link.get(f"{side}_actual", "")
+            ok, _ = run(["docker", "exec", node["container"], "ip", "link", "show", "dev", previous]) if previous else (False, "")
+            actual = previous if ok else ""
+        resolved[link["id"]] = actual
     with STATE_LOCK:
         state = load_state()
         for link_id, actual in resolved.items():
@@ -386,15 +398,15 @@ def update_node(node_id, payload):
         if "description" in payload:
             node["description"] = str(payload["description"]).strip()[:256]
         if "ethernet" in payload:
-            ethernet = bounded_int(payload["ethernet"], 1, 16, "Ethernet")
+            ethernet = bounded_int(payload["ethernet"], 1, 16, "сетевые порты")
             available = set(port_names({**node, "ethernet": ethernet}))
             if not used_ports(node_id, state).issubset(available):
                 raise ValueError("сначала удалите связи с портов, которые хотите убрать")
             node["ethernet"] = ethernet
         if "cpu" in payload:
-            node["cpu"] = bounded_int(payload["cpu"], 1, 4, "CPU")
+            node["cpu"] = bounded_int(payload["cpu"], 1, 4, "процессорные ядра")
         if "ram" in payload:
-            node["ram"] = bounded_int(payload["ram"], 64, 4096, "RAM")
+            node["ram"] = bounded_int(payload["ram"], 64, 4096, "ОЗУ")
         save_state(state)
         result = dict(node)
     run(["docker", "update", "--cpus", str(result["cpu"]), "--memory", f"{result['ram']}m", result["container"]])
@@ -417,7 +429,7 @@ def apply_startup(node, startup):
         run(["docker", "exec", node["container"], "chmod", "660", "/etc/frr/frr.conf"])
         ok, output = run(["docker", "restart", node["container"]], timeout=45)
         if not ok or not wait_router(node["container"]):
-            raise RuntimeError(output or "не удалось применить startup-config")
+            raise RuntimeError(output or "не удалось применить стартовую конфигурацию")
     else:
         for command in startup.get("commands", []):
             run(["docker", "exec", node["container"], "sh", "-lc", command])
@@ -559,7 +571,7 @@ def update_startup_config(node_id, payload):
         if "content" in payload:
             content = str(payload["content"])
             if len(content.encode("utf-8")) > 262144:
-                raise ValueError("startup-config слишком большой")
+                raise ValueError("стартовая конфигурация слишком большая")
             config["content"] = content
             if node["type"] == "pc":
                 config["commands"] = [line for line in content.splitlines() if line.strip()]
@@ -656,9 +668,9 @@ def start_console_session(payload):
     if not container_running(node["container"]):
         raise ValueError("сначала запустите узел")
     if mode == "frr" and node["type"] != "router":
-        raise ValueError("FRR CLI доступна только на маршрутизаторе")
+        raise ValueError("консоль маршрутизатора доступна только на маршрутизаторе")
     if mode == "vpc" and node["type"] != "pc":
-        raise ValueError("VPC CLI доступна только на виртуальном ПК")
+        raise ValueError("консоль виртуального ПК доступна только на виртуальном ПК")
     if mode not in ("frr", "shell", "vpc"):
         raise ValueError("неизвестный режим консоли")
     session_id = uuid.uuid4().hex
@@ -667,14 +679,14 @@ def start_console_session(payload):
         SESSIONS[session_id] = session
     if mode == "frr":
         banner = (
-            "Labs-IB Router — FRRouting, ARM64\n"
-            "Функциональный эквивалент vESR: IPv4/IPv6, static, RIP, OSPF, BGP.\n"
+            "Маршрутизатор Labs-IB — FRRouting, ARM64\n"
+            "Функциональный эквивалент vESR: IPv4/IPv6, статическая маршрутизация, RIP, OSPF, BGP.\n"
             "Порты на схеме gi1/0/N автоматически переводятся в Linux-интерфейсы. commit = сохранить."
         )
     elif mode == "vpc":
-        banner = "Labs-IB Virtual PC\nКоманды: ip, show ip, ping, trace, arp, save, clear, help"
+        banner = "Виртуальный ПК Labs-IB\nКоманды: ip, show ip, ping, trace, arp, save, clear, help"
     else:
-        banner = "Linux shell внутри узла. Для сохраняемой настройки ПК используй режим VPC CLI."
+        banner = "Командная оболочка Linux внутри узла. Для сохраняемой настройки ПК используй режим консоли виртуального ПК."
     return {"session": session_id, "prompt": prompt_for(node, session), "output": banner}
 
 
@@ -682,10 +694,10 @@ def show_interfaces(node):
     refresh_interfaces(node["id"])
     with STATE_LOCK:
         interfaces = interfaces_for(node, load_state())
-    rows = ["Interface        Admin  Link  Linux", "---------------  -----  ----  --------"]
+    rows = ["Интерфейс       Админ.  Связь  Linux", "---------------  ------  -----  --------"]
     for item in interfaces:
-        link = "Up" if item["used"] and item.get("actual") else "Down"
-        rows.append(f"{item['name']:<15}  Up     {link:<4}  {item.get('actual') or '-'}")
+        link = "есть" if item["used"] and item.get("actual") else "нет"
+        rows.append(f"{item['name']:<15}  вкл.    {link:<5}  {item.get('actual') or '-'}")
     return "\n".join(rows)
 
 
@@ -705,19 +717,19 @@ def frr_command(node, session, raw):
         ok, output = run(["docker", "exec", node["container"], "vtysh", "-c", "write memory"], timeout=30)
         if not ok:
             raise RuntimeError(output)
-        return (output or "Configuration saved.") + "\nConfiguration committed and saved."
+        return (output or "Конфигурация сохранена.") + "\nИзменения применены и сохранены."
     if lower in ("confirm", "do confirm"):
-        return "Configuration has been confirmed."
+        return "Конфигурация подтверждена."
     if lower in ("reload", "reload system"):
         restart_node(node["id"])
         session["contexts"] = []
-        return "System reloaded."
+        return "Система перезагружена."
     if lower in ("show interfaces status", "show interface status"):
         return show_interfaces(node)
     if lower in ("ip firewall disable", "no ip firewall"):
-        return "Compatibility command accepted; the lab router has no default filtering."
+        return "Совместимая команда принята: на маршрутизаторе стенда нет фильтрации по умолчанию."
     if lower == "enable" and session["contexts"]:
-        return "Compatibility command accepted."
+        return "Совместимая команда принята."
 
     translated = translate_aliases(node, command)
     contexts = [item for item in session["contexts"] if item["command"]]
@@ -746,7 +758,7 @@ def vpc_command(node, raw):
         connected = [item for item in interfaces_for(node, state) if item["used"] and item.get("actual")]
     actual = connected[0]["actual"] if connected else ""
     if lower in ("help", "?"):
-        return "ip ADDRESS/PREFIX [GATEWAY] | show ip | ping HOST | trace HOST | arp | save | clear"
+        return "ip АДРЕС/ПРЕФИКС [ШЛЮЗ] | show ip | ping УЗЕЛ | trace УЗЕЛ | arp | save | clear"
     if lower in ("show", "show ip"):
         ok, output = run(["docker", "exec", node["container"], "sh", "-lc", "ip -br address; ip route"])
         if not ok:
@@ -756,11 +768,11 @@ def vpc_command(node, raw):
         ok, output = run(["docker", "exec", node["container"], "ip", "neigh"])
         if not ok:
             raise RuntimeError(output)
-        return output or "ARP table is empty"
+        return output or "Таблица ARP пуста"
     if lower.startswith(("ping ", "trace ", "traceroute ")):
         parts = text.split()
         if len(parts) != 2 or not re.fullmatch(r"[A-Za-z0-9_.:-]+", parts[1]):
-            raise ValueError("укажите один корректный адрес или hostname")
+            raise ValueError("укажите один корректный IP-адрес или доменное имя")
         tool = "traceroute" if lower.startswith(("trace ", "traceroute ")) else "ping"
         args = ["-m", "8", "-w", "2"] if tool == "traceroute" else ["-c", "4", "-W", "2"]
         _, output = run(["docker", "exec", node["container"], tool, *args, parts[1]], timeout=20)
@@ -774,7 +786,7 @@ def vpc_command(node, raw):
         commands = [f"ip addr replace {parts[1]} dev {actual}", f"ip link set {actual} up"]
         if len(parts) == 3:
             if not re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", parts[2]):
-                raise ValueError("некорректный gateway")
+                raise ValueError("некорректный шлюз")
             commands.append(f"ip route replace default via {parts[2]} dev {actual}")
         ok, output = run(["docker", "exec", node["container"], "sh", "-lc", " && ".join(commands)])
         if not ok:
@@ -785,10 +797,10 @@ def vpc_command(node, raw):
             current["vpc_commands"] = [item for item in current.get("vpc_commands", []) if not item.startswith(("ip addr replace ", "ip route replace default "))]
             current["vpc_commands"].extend(commands)
             save_state(state)
-        return f"Address configured on {connected[0]['name']} ({actual})"
+        return f"Адрес настроен на {connected[0]['name']} ({actual})"
     if lower == "save":
         result = export_node_config(node["id"])
-        return f"Startup configuration saved ({result['bytes']} bytes)."
+        return f"Стартовая конфигурация сохранена ({result['bytes']} байт)."
     if lower == "clear":
         if actual:
             run(["docker", "exec", node["container"], "sh", "-lc", f"ip addr flush dev {actual} scope global; ip route del default 2>/dev/null || true"])
@@ -796,7 +808,7 @@ def vpc_command(node, raw):
             state = load_state()
             state["nodes"][node["id"]]["vpc_commands"] = []
             save_state(state)
-        return "VPC address configuration cleared"
+        return "Настройки адреса виртуального ПК очищены"
     raise ValueError("неизвестная VPC-команда; введите help")
 
 

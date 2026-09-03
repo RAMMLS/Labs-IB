@@ -20,7 +20,7 @@ for file in \
   "$FRR_DIR/ui/static/app.js"; do
   test -s "$file"
 done
-echo 'OK: шаблоны пустых узлов и web-конструктор найдены'
+echo 'OK: шаблоны пустых узлов и веб-конструктор найдены'
 
 router_arch="$(docker image inspect labsib-frr-node:latest --format '{{.Architecture}}' 2>/dev/null || true)"
 if [[ "$router_arch" != "arm64" ]]; then

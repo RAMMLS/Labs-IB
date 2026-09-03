@@ -105,8 +105,8 @@ function renderNodes() {
     element.style.top = `${node.y}px`;
     element.innerHTML = `
       <div class="quick-controls">
-        <button data-quick="${node.running ? "console" : "start"}" title="${node.running ? "HTML Console" : "Start"}">${node.running ? "›_" : "▶"}</button>
-        <button data-quick="connect" title="Connect">⌁</button>
+        <button data-quick="${node.running ? "console" : "start"}" title="${node.running ? "Веб-консоль" : "Запустить"}">${node.running ? "›_" : "▶"}</button>
+        <button data-quick="connect" title="Соединить">⌁</button>
       </div>
       <div class="device-icon">${node.type === "router" ? routerIcon : pcIcon}</div>`;
     const label = document.createElement("div");
@@ -114,7 +114,7 @@ function renderNodes() {
     label.innerHTML = `<i class="state-dot"></i><span></span>`;
     label.querySelector("span").textContent = node.name;
     element.appendChild(label);
-    element.title = `${node.name} · ${node.image}\n${node.ethernet} Ethernet · ${node.cpu} CPU · ${node.ram} MB RAM`;
+    element.title = `${node.name} · ${node.image}\n${node.ethernet} сетевых портов · ${node.cpu} процессорных ядер · ${node.ram} МБ ОЗУ`;
     element.addEventListener("click", event => onNodeClick(event, node));
     element.addEventListener("contextmenu", event => openNodeMenu(event, node.id));
     element.addEventListener("pointerdown", event => beginDrag(event, node, element));
@@ -126,7 +126,7 @@ function renderNodes() {
           linkMode = true;
           firstLinkNode = node.id;
           document.getElementById("add-link").classList.add("active");
-          modeHint.textContent = `Выбери вторую ноду для связи с ${node.name}`;
+          modeHint.textContent = `Выбери второй узел для связи с ${node.name}`;
           renderNodes();
         } else if (button.dataset.quick === "console") {
           openConsole(node.id);
@@ -219,7 +219,7 @@ async function addNode(event) {
   try {
     const response = await api("/api/nodes", {method: "POST", body: JSON.stringify(payload)});
     closeModal("add-modal");
-    toast(`Создано нод: ${response.result.length}. Они выключены.`);
+    toast(`Создано узлов: ${response.result.length}. Они выключены.`);
     await refresh();
   } catch (error) { toast(error.message, true); }
 }
@@ -228,7 +228,7 @@ function toggleLinkMode(force) {
   linkMode = force === undefined ? !linkMode : force;
   firstLinkNode = null;
   document.getElementById("add-link").classList.toggle("active", linkMode);
-  modeHint.textContent = linkMode ? "Выбери первую ноду" : "Перетаскивай устройства мышью";
+  modeHint.textContent = linkMode ? "Выбери первый узел" : "Перетаскивай устройства мышью";
   renderNodes();
 }
 
@@ -240,12 +240,12 @@ function showLinkDialog(a, b) {
   const aPorts = availablePorts(a);
   const bPorts = availablePorts(b);
   if (!aPorts.length || !bPorts.length) {
-    toast("У одной из нод не осталось свободных Ethernet-портов", true);
+    toast("У одного из узлов не осталось свободных сетевых портов", true);
     toggleLinkMode(false);
     return;
   }
   pendingLink = {a: a.id, b: b.id};
-  document.getElementById("link-title").textContent = `ADD CONNECTION BETWEEN ${a.name} AND ${b.name}`;
+  document.getElementById("link-title").textContent = `СОЕДИНЕНИЕ: ${a.name} — ${b.name}`;
   document.getElementById("link-a-name").textContent = a.name;
   document.getElementById("link-b-name").textContent = b.name;
   for (const [id, ports] of [["link-a-interface", aPorts], ["link-b-interface", bPorts]]) {
@@ -266,18 +266,18 @@ async function onNodeClick(event, node) {
   if (dragMoved) { dragMoved = false; return; }
   if (!linkMode) {
     if (node.running) openConsole(node.id);
-    else toast("Нода выключена. Запусти её через ▶ или правый клик.");
+    else toast("Узел выключен. Запусти его через ▶ или правый клик.");
     return;
   }
   if (!firstLinkNode) {
     firstLinkNode = node.id;
-    modeHint.textContent = `Теперь выбери вторую ноду для связи с ${node.name}`;
+    modeHint.textContent = `Теперь выбери второй узел для связи с ${node.name}`;
     renderNodes();
     return;
   }
   if (firstLinkNode === node.id) {
     firstLinkNode = null;
-    modeHint.textContent = "Выбери первую ноду";
+    modeHint.textContent = "Выбери первый узел";
     renderNodes();
     return;
   }
@@ -354,7 +354,7 @@ function closeNodeMenu() {
 async function actionForNode(nodeId, action) {
   try {
     await api("/api/actions", {method: "POST", body: JSON.stringify({action, node: nodeId})});
-    const messages = {start: "Нода запущена", stop: "Нода остановлена", restart: "Нода перезагружена", wipe: "Нода очищена и выключена", export: "Startup-config сохранён"};
+    const messages = {start: "Узел запущен", stop: "Узел остановлен", restart: "Узел перезагружен", wipe: "Узел сброшен и выключен", export: "Стартовая конфигурация сохранена"};
     toast(messages[action] || "Готово");
     await refresh();
   } catch (error) { toast(error.message, true); }
@@ -383,7 +383,7 @@ async function saveEdit(event) {
   try {
     await api(`/api/nodes/${id}`, {method: "PATCH", body: JSON.stringify(payload)});
     closeModal("edit-modal");
-    toast("Параметры ноды сохранены");
+    toast("Параметры узла сохранены");
     await refresh();
   } catch (error) { toast(error.message, true); }
 }
@@ -391,7 +391,7 @@ async function saveEdit(event) {
 function showCapture(node) {
   const ports = node.interfaces.filter(item => item.used);
   if (!node.running || !ports.length) {
-    toast("Для захвата запусти ноду и подключи кабель", true);
+    toast("Для захвата запусти узел и подключи кабель", true);
     return;
   }
   selectedNode = node.id;
@@ -403,7 +403,7 @@ function showCapture(node) {
     option.textContent = `${port.name}${port.actual ? ` (${port.actual})` : ""}`;
     select.appendChild(option);
   }
-  document.getElementById("capture-output").textContent = "Выберите интерфейс и нажмите Start capture.";
+  document.getElementById("capture-output").textContent = "Выберите интерфейс и нажмите «Начать захват».";
   openModal("capture-modal");
 }
 
@@ -425,15 +425,15 @@ async function nodeAction(action) {
   if (action === "edit") return showEdit(node);
   if (action === "capture") return showCapture(node);
   if (action === "delete") {
-    if (!confirm(`Удалить ноду ${node.name}, её кабели и сохранённую конфигурацию?`)) return;
+    if (!confirm(`Удалить узел ${node.name}, его кабели и сохранённую конфигурацию?`)) return;
     try {
       await api(`/api/nodes/${node.id}`, {method: "DELETE"});
-      toast("Нода удалена");
+      toast("Узел удалён");
       await refresh();
     } catch (error) { toast(error.message, true); }
     return;
   }
-  if (action === "wipe" && !confirm(`Wipe сбросит рабочее состояние ${node.name}. Сохранённый Startup CFG останется. Продолжить?`)) return;
+  if (action === "wipe" && !confirm(`Сброс удалит рабочее состояние узла ${node.name}. Сохранённая стартовая конфигурация останется. Продолжить?`)) return;
   await actionForNode(node.id, action);
   if (action === "export") window.location.href = `/api/nodes/${node.id}/config`;
 }
@@ -468,16 +468,16 @@ async function openConsole(nodeId) {
     return;
   }
   selectedNode = nodeId;
-  document.getElementById("console-title").textContent = `HTML Console — ${node.name}`;
-  document.getElementById("console-status").textContent = `${node.image} · running`;
+  document.getElementById("console-title").textContent = `Веб-консоль — ${node.name}`;
+  document.getElementById("console-status").textContent = `${node.image} · работает`;
   const mode = document.getElementById("console-mode");
   mode.querySelector('option[value="frr"]').disabled = node.type !== "router";
   mode.querySelector('option[value="vpc"]').disabled = node.type !== "pc";
   mode.value = node.type === "router" ? "frr" : "vpc";
   const used = node.interfaces.filter(item => item.used);
   document.getElementById("interface-list").textContent = used.length
-    ? used.map(item => `${item.name}→${item.actual || "pending"}`).join(" · ")
-    : "Interfaces: no cables";
+    ? used.map(item => `${item.name}→${item.actual || "ожидание"}`).join(" · ")
+    : "Интерфейсы: кабели не подключены";
   document.getElementById("console-output").textContent = "";
   document.getElementById("console-input").value = "";
   openModal("console-modal");
@@ -500,7 +500,7 @@ async function runConsoleCommand(event) {
     appendConsole(response.result.output);
     document.getElementById("console-prompt").textContent = response.result.prompt;
     await refresh();
-  } catch (error) { appendConsole(`% Error: ${error.message}`); }
+  } catch (error) { appendConsole(`% Ошибка: ${error.message}`); }
   input.disabled = false;
   input.focus();
 }
@@ -508,15 +508,15 @@ async function runConsoleCommand(event) {
 async function openStartupConfigs() {
   openModal("startup-modal");
   const list = document.getElementById("startup-list");
-  list.innerHTML = '<div class="loading">Loading…</div>';
+  list.innerHTML = '<div class="loading">Загрузка…</div>';
   try {
     const response = await api("/api/startup-configs");
     list.innerHTML = "";
-    if (!response.result.length) list.innerHTML = '<div class="loading">Сначала добавьте ноды</div>';
+    if (!response.result.length) list.innerHTML = '<div class="loading">Сначала добавьте узлы</div>';
     for (const config of response.result) {
       const button = document.createElement("button");
       button.className = "startup-item";
-      button.innerHTML = `<b></b><span>${config.content ? "saved" : "not saved"} · ${config.enabled ? "enabled" : "disabled"}</span>`;
+      button.innerHTML = `<b></b><span>${config.content ? "сохранена" : "не сохранена"} · ${config.enabled ? "включена" : "отключена"}</span>`;
       button.querySelector("b").textContent = config.name;
       button.addEventListener("click", () => selectStartup(config, button));
       list.appendChild(button);
@@ -547,7 +547,7 @@ async function saveStartup() {
         enabled: document.getElementById("startup-enabled").checked,
       }),
     });
-    toast("Startup-config сохранён");
+    toast("Стартовая конфигурация сохранена");
     await openStartupConfigs();
   } catch (error) { toast(error.message, true); }
 }
@@ -555,7 +555,7 @@ async function saveStartup() {
 async function allAction(action) {
   try {
     await api("/api/actions", {method: "POST", body: JSON.stringify({action})});
-    toast({start: "Все ноды запущены", stop: "Все ноды остановлены", export: "Конфигурации запущенных нод сохранены"}[action]);
+    toast({start: "Все узлы запущены", stop: "Все узлы остановлены", export: "Конфигурации запущенных узлов сохранены"}[action]);
     await refresh();
   } catch (error) { toast(error.message, true); }
 }

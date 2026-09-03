@@ -64,6 +64,10 @@ try:
     for node in (router, pc):
         call("/api/actions", "POST", {"action": "start", "node": node["id"]})
 
+    router_shell = call("/api/console/session", "POST", {"node": router["id"], "mode": "shell"})["result"]["session"]
+    addresses = call("/api/console", "POST", {"session": router_shell, "command": "ip -o -4 address show"})["result"]["output"]
+    assert "169.254." not in addresses, "служебный адрес Docker остался на учебном интерфейсе"
+
     router_session = call("/api/console/session", "POST", {"node": router["id"], "mode": "frr"})["result"]["session"]
     for command in ("configure", "interface gigabitethernet 1/0/2", "ip address 10.77.0.1/30", "exit", "end", "commit"):
         call("/api/console", "POST", {"session": router_session, "command": command})
@@ -82,9 +86,10 @@ try:
 
     print("OK: ноды создаются выключенными")
     print("OK: кабель занимает выбранные gi1/0/2 и eth1")
-    print("OK: Router CLI и VPC CLI настраивают реальную связность")
+    print("OK: служебный адрес Docker удалён с учебного L2-сегмента")
+    print("OK: консоли маршрутизатора и виртуального ПК настраивают реальную связность")
     print("OK: ping по пользовательским адресам проходит")
-    print("OK: Export CFG → Wipe → Start восстанавливает startup-config")
+    print("OK: экспорт → сброс → запуск восстанавливает стартовую конфигурацию")
 finally:
     cleanup()
     state = call("/api/topology")

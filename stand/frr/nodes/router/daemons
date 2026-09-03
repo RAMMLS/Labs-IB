@@ -1,0 +1,8 @@
+zebra=yes
+bgpd=yes
+ospfd=yes
+ripd=yes
+staticd=yes
+vtysh_enable=yes
+
+watchfrr_enable=yes

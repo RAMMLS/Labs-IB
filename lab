@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$ROOT_DIR/data.env"
+
+usage() {
+  cat <<'EOF'
+Использование: ./lab <команда>
+
+Локальный бесплатный стенд:
+  up             запустить конструктор и сохранённые узлы
+  open           открыть визуальный конструктор в браузере
+  down           остановить стенд без удаления топологии
+  test           проверить готовность конструктора и образов
+  status         показать web-панель и созданные узлы
+  shell <node>   открыть shell узла по имени на схеме
+  doctor         проверить Docker-контур
+  build          пересобрать локальный стенд
+
+Исходный PNETLab/vESR на внешнем x86/KVM-хосте:
+  remote-doctor  проверить хост и материалы
+  remote-deploy  развернуть топологию и vESR-интеграцию
+  remote-status  проверить установленные файлы
+  remote-open    открыть web-интерфейс
+  remote-build   пересобрать управляющий контейнер
+EOF
+}
+
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Ошибка: Docker CLI не найден." >&2
+    exit 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    if command -v colima >/dev/null 2>&1; then
+      echo "Docker не запущен. Запускаю существующий профиль Colima..."
+      colima start
+    else
+      echo "Ошибка: Docker daemon не запущен." >&2
+      exit 1
+    fi
+  fi
+}
+
+run_labctl() {
+  local -a args=(docker compose --project-directory "$ROOT_DIR")
+  local ssh_key=""
+
+  if [[ -f "$ENV_FILE" ]]; then
+    args+=(--env-file "$ENV_FILE")
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    ssh_key="${PNETLAB_SSH_KEY:-}"
+  fi
+
+  args+=(run --rm)
+
+  if [[ -n "${SSH_AUTH_SOCK:-}" && -S "${SSH_AUTH_SOCK}" ]]; then
+    args+=(-e SSH_AUTH_SOCK=/run/ssh-agent -v "${SSH_AUTH_SOCK}:/run/ssh-agent")
+  fi
+
+  if [[ -n "$ssh_key" ]]; then
+    if [[ "$ssh_key" != /* || ! -f "$ssh_key" ]]; then
+      echo "Ошибка: PNETLAB_SSH_KEY должен быть абсолютным путём к существующему ключу." >&2
+      exit 1
+    fi
+    args+=(-e PNETLAB_SSH_KEY=/run/secrets/pnetlab_ssh_key -v "${ssh_key}:/run/secrets/pnetlab_ssh_key:ro")
+  fi
+
+  args+=(labctl "$@")
+  "${args[@]}"
+}
+
+frr_compose() {
+  docker compose \
+    --project-directory "$ROOT_DIR" \
+    -f "$ROOT_DIR/compose.yaml" \
+    "$@"
+}
+
+build_local() {
+  frr_compose build lab-ui
+}
+
+stop_managed_nodes() {
+  local node_ids
+  node_ids="$(docker ps -q --filter label=labsib.managed=true)"
+  if [[ -n "$node_ids" ]]; then
+    # shellcheck disable=SC2086
+    docker stop $node_ids >/dev/null
+  fi
+}
+
+local_up() {
+  frr_compose up -d --build lab-ui
+}
+
+command_name="${1:-}"
+case "$command_name" in
+  up)
+    require_docker
+    local_up
+    ;;
+  open)
+    require_docker
+    local_up
+    dashboard_url="http://127.0.0.1:8080/"
+    if command -v open >/dev/null 2>&1; then
+      open "$dashboard_url"
+    else
+      printf '%s\n' "$dashboard_url"
+    fi
+    ;;
+  down)
+    require_docker
+    stop_managed_nodes
+    frr_compose down --remove-orphans
+    ;;
+  test)
+    require_docker
+    "$ROOT_DIR/stand/frr/test.sh"
+    ;;
+  status)
+    require_docker
+    frr_compose ps lab-ui
+    echo
+    echo 'Узлы лабораторной:'
+    docker ps -a --filter label=labsib.managed=true \
+      --format 'table {{.Names}}\t{{.Label "labsib.display_name"}}\t{{.Label "labsib.node_type"}}\t{{.Status}}'
+    ;;
+  doctor)
+    require_docker
+    "$ROOT_DIR/stand/frr/doctor.sh"
+    ;;
+  shell)
+    require_docker
+    if [[ -z "${2:-}" ]]; then
+      echo "Ошибка: укажите имя узла со схемы, например ./lab shell Router1" >&2
+      exit 2
+    fi
+    node_container="$(docker ps -a --filter label=labsib.managed=true \
+      --format '{{.Names}}\t{{.Label "labsib.display_name"}}' \
+      | awk -F '\t' -v target="$2" '$1 == target || $2 == target {print $1; exit}')"
+    if [[ -z "$node_container" ]]; then
+      echo "Ошибка: узел '$2' не найден." >&2
+      exit 1
+    fi
+    docker start "$node_container" >/dev/null
+    docker exec -it "$node_container" sh
+    ;;
+  remote-doctor)
+    require_docker
+    run_labctl doctor
+    ;;
+  remote-deploy)
+    require_docker
+    run_labctl deploy
+    ;;
+  remote-status)
+    require_docker
+    run_labctl status
+    ;;
+  build)
+    require_docker
+    build_local
+    ;;
+  remote-build)
+    require_docker
+    docker compose --project-directory "$ROOT_DIR" build labctl
+    ;;
+  remote-open)
+    if [[ ! -f "$ENV_FILE" ]]; then
+      echo "Ошибка: нет data.env. Скопируйте data.env.example и укажите PNETLAB_HOST." >&2
+      exit 1
+    fi
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    if [[ -z "${PNETLAB_HOST:-}" ]]; then
+      echo "Ошибка: в data.env не задан PNETLAB_HOST." >&2
+      exit 1
+    fi
+    target_url="${PNETLAB_WEB_SCHEME:-http}://${PNETLAB_HOST}"
+    if command -v open >/dev/null 2>&1; then
+      open "$target_url"
+    else
+      printf '%s\n' "$target_url"
+    fi
+    ;;
+  -h|--help|help|"")
+    usage
+    ;;
+  *)
+    echo "Неизвестная команда: $command_name" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

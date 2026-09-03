@@ -1,0 +1,47 @@
+name: labs-ib
+
+services:
+  lab-ui:
+    image: labsib-stand-ui:latest
+    build:
+      context: ./stand/frr
+      dockerfile: ui/Dockerfile
+    container_name: labsib-stand-ui
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - lab-data:/data
+    environment:
+      ROUTER_IMAGE: labsib-frr-node:latest
+      PC_IMAGE: labsib-pc-node:latest
+      NODE_IMAGE_ROOT: /app/node-images
+      TOPOLOGY_FILE: /data/topology.json
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+  labctl:
+    profiles: [remote]
+    build:
+      context: .
+      dockerfile: infra/labctl/Dockerfile
+    env_file:
+      - path: ./data.env
+        required: false
+    working_dir: /workspace
+    volumes:
+      - .:/workspace:ro
+    entrypoint: ["/workspace/infra/labctl/labctl.sh"]
+
+volumes:
+  lab-data:

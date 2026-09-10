@@ -1,0 +1,135 @@
+{
+  "environment": {
+    "python": "3.12.14",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.0",
+    "matplotlib": "3.11.1",
+    "statsmodels": "0.15.0",
+    "nbformat": "5.11.1",
+    "nbclient": "0.11.0",
+    "ipykernel": "7.3.0"
+  },
+  "active_variant": 1,
+  "gradient_theta": [
+    101.29764721305946,
+    3.6738616055133977
+  ],
+  "exact_theta": [
+    101.30202054765167,
+    3.674020217549201
+  ],
+  "gradient_final_loss": 438.36424909866037,
+  "gradient_iterations": 1000,
+  "lasso_kkt_checks": 679,
+  "lasso_kkt_max_violation": 3.4059213782633435e-13,
+  "ols": {
+    "r2": 0.42985992877981316,
+    "adjusted_r2": 0.42404217295103586,
+    "f_statistic": 73.8875850810925,
+    "f_pvalue": 1.336804580130542e-13,
+    "aic": 965.4074384347786,
+    "bic": 970.6177788067547
+  },
+  "checks": [
+    "normal_equations_vs_lstsq_degrees_1_2_3",
+    "gradient_monotone_finite",
+    "gradient_vs_lstsq",
+    "sklearn_vs_lstsq",
+    "statsmodels_vs_lstsq",
+    "lasso_kkt_conditions"
+  ],
+  "all_variants": [
+    {
+      "variant": 1,
+      "method": "OLS polyfit",
+      "degree": 2,
+      "alpha": 0.0,
+      "cv_mse_mean": 1023.9615713812273,
+      "cv_mse_std": 404.0756774705818,
+      "test_mse": 798.6471581141238,
+      "test_r2": 0.5058190380735956
+    },
+    {
+      "variant": 1,
+      "method": "Ridge",
+      "degree": 2,
+      "alpha": 1.0,
+      "cv_mse_mean": 1022.9738917054996,
+      "cv_mse_std": 401.0839700163687,
+      "test_mse": 800.0499684352021,
+      "test_r2": 0.504951017513042
+    },
+    {
+      "variant": 1,
+      "method": "Lasso",
+      "degree": 2,
+      "alpha": 0.01,
+      "cv_mse_mean": 1023.9973284301923,
+      "cv_mse_std": 403.9094850186035,
+      "test_mse": 798.6481932303576,
+      "test_r2": 0.5058183975720538
+    },
+    {
+      "variant": 2,
+      "method": "OLS polyfit",
+      "degree": 2,
+      "alpha": 0.0,
+      "cv_mse_mean": 553.2249821418719,
+      "cv_mse_std": 402.0969378872057,
+      "test_mse": 394.84758599238506,
+      "test_r2": 0.7517753376641431
+    },
+    {
+      "variant": 2,
+      "method": "Ridge",
+      "degree": 2,
+      "alpha": 1.0,
+      "cv_mse_mean": 552.9118445235499,
+      "cv_mse_std": 409.5628838116652,
+      "test_mse": 398.52374447298456,
+      "test_r2": 0.7494642859320007
+    },
+    {
+      "variant": 2,
+      "method": "Lasso",
+      "degree": 2,
+      "alpha": 0.01,
+      "cv_mse_mean": 553.2300192267377,
+      "cv_mse_std": 402.23638916039215,
+      "test_mse": 394.89944872292995,
+      "test_r2": 0.7517427336689965
+    },
+    {
+      "variant": 3,
+      "method": "OLS polyfit",
+      "degree": 2,
+      "alpha": 0.0,
+      "cv_mse_mean": 759.8566337916998,
+      "cv_mse_std": 187.44791994100856,
+      "test_mse": 808.8142087195416,
+      "test_r2": 0.4811603798144617
+    },
+    {
+      "variant": 3,
+      "method": "Ridge",
+      "degree": 9,
+      "alpha": 0.1,
+      "cv_mse_mean": 757.1900797595666,
+      "cv_mse_std": 278.57870495026566,
+      "test_mse": 835.4489477631176,
+      "test_r2": 0.4640746786235944
+    },
+    {
+      "variant": 3,
+      "method": "Lasso",
+      "degree": 2,
+      "alpha": 0.01,
+      "cv_mse_mean": 759.9288384152799,
+      "cv_mse_std": 187.66707505796006,
+      "test_mse": 808.7394770461106,
+      "test_r2": 0.48120831882522686
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "k_neighbor_classification.ipynb": {
+    "screenshot": "figures/knn_notebook_screenshot.png",
+    "output_sha256": "8dc942e9fb0685ffcc68c3ae4e70dd4b29754022ce1b1bcb36908e9d970cdc66"
+  },
+  "decision_tree.ipynb": {
+    "screenshot": "figures/tree_notebook_screenshot.png",
+    "output_sha256": "7d6f0af4c549dd95f49818646fc3795562940eb30458cfbd7df1021afc9c33a9"
+  }
+}
